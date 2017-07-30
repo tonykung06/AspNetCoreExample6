@@ -1,11 +1,29 @@
 {
+    // for publishing self-contained app, this section will be used when "type": "platform" is removed
+    // see https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
+    //"runtimes": {
+    //    "win81-x64": {},
+    //    "osx.10.11-x64": {}
+    //},
     "dependencies": {
         "Microsoft.NETCore.App": {
             "version": "1.0.1",
+            // "platform" means run the app on a machine that has dotnet core CLR and dotnet cli of correct versions, and published as a portable application,
+            // the publishing output will be a .dll, that could be run by dotnet <dll name>
+            // On the other hand, we could delete this line to create self-contained deployment, which include dotnet core CLR in the app publishing.
+            // In this case, we need to know which platform, i.e. OS and CPU architecture (RID), in advance,
+            // because dotnet runtime program (coreclr.dll) will be published as a part of the app and run natively on the platform you specify.
             "type": "platform"
         },
         "Microsoft.AspNetCore.Diagnostics": "1.0.0",
         "Microsoft.AspNetCore.Server.IISIntegration": "1.0.0",
+
+        // Kestrel has a native dependency called libuv, which is installed with donet SDK for a specific OS,
+        // the native dlls are located in C:\Program Files\dotnet\shared\Microsoft.NETCore.App\1.1.0
+        // For other packages that have native dependencies, the dotnet publish will include the dlls for all supported OS-CPU (RID, Runtime identifiers),
+        // in <publish profile name>/runtimes/RID folders
+        // Running Kestrel (internal/embeded web server) without IIS/Nginx (external web server) is fine for testing purpose,
+        // we will need the external server together with Kestrel on production for features like security and load-balancing.
         "Microsoft.AspNetCore.Server.Kestrel": "1.0.1",
         "Microsoft.Extensions.Logging.Console": "1.0.0",
         "Microsoft.AspNetCore.Mvc": "1.1.1",
@@ -49,6 +67,17 @@
     },
 
     "scripts": {
+        // Microsoft.AspNetCore.Server.IISIntegration.Tools extends the dotnet cli with publish-iis verb
+        // publish-iis will publish web.config to IIS, on which AspNetCoreModule has been installed.
+        // IIS with AspNetCoreModule could manage asp.net core application, which is specified inside the web.config,
+        // so IIS could start and stop the dotnet core app together with Kestrel (a command line app) via dotnet CLI if needed.
+        // Also could handle concurrency. Dotnet core CLR is running separate from IIS.
+        // dotnet -h
+        // dotnet run -h
+        // dotnet restore
+        // dotnet build
+        // dotnet run - build the app and run the executable (main method is the entry point) inside CLR, which is hosted in a process managed by dotnet cli
+        // dotnet publish
         "postpublish": [ "dotnet publish-iis --publish-folder %publish:OutputPath% --framework %publish:FullTargetFramework%" ]
     }
 }
